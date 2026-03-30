@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dream11 Points Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  /* ── Reset & tokens ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0c10;
+    --surface:   #111318;
+    --card:      #161b22;
+    --border:    #21262d;
+    --accent:    #f0b429;
+    --accent2:   #e05252;
+    --green:     #3fb950;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --radius:    12px;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --font-body: 'Outfit', sans-serif;
+  }
+
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  /* ── Animated pitch texture background ─────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg, transparent 0, transparent 59px, rgba(255,255,255,.015) 60px),
+      repeating-linear-gradient(0deg,  transparent 0, transparent 59px, rgba(255,255,255,.015) 60px);
+    background-size: 60px 60px;
+  }
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  #app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── Nav ────────────────────────────────────────────────── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,12,16,.85); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0; padding: 0 24px;
+    height: 56px;
+  }
+  .nav-logo {
+    font-family: var(--font-head); font-size: 22px; letter-spacing: 1px;
+    color: var(--accent); margin-right: auto; display: flex; align-items: center; gap: 8px;
+  }
+  .nav-logo span { color: var(--text); }
+  .nav-logo .dot { width:8px; height:8px; border-radius:50%; background:var(--accent2); display:inline-block; margin-bottom:1px; }
+  nav a {
+    font-size: 13px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--muted); text-decoration: none; padding: 0 16px; height: 100%;
+    display: flex; align-items: center; border-bottom: 2px solid transparent;
+    transition: color .2s, border-color .2s; cursor: pointer;
+  }
+  nav a:hover    { color: var(--text); }
+  nav a.active   { color: var(--accent); border-color: var(--accent); }
+
+  /* ── Pages ──────────────────────────────────────────────── */
+  .page { display: none; flex: 1; padding: 48px 24px; max-width: 960px; margin: 0 auto; width: 100%; }
+  .page.active { display: flex; flex-direction: column; gap: 32px; animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+  /* ── Page header ────────────────────────────────────────── */
+  .page-header { display: flex; flex-direction: column; gap: 4px; }
+  .page-header h1 { font-family: var(--font-head); font-size: clamp(36px,6vw,60px); letter-spacing: 2px; line-height: 1; }
+  .page-header h1 em { color: var(--accent); font-style: normal; }
+  .page-header p { color: var(--muted); font-size: 14px; }
+
+  /* ── Card ───────────────────────────────────────────────── */
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px; position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0; border-radius: var(--radius);
+    background: linear-gradient(135deg, rgba(240,180,41,.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ── Submit form ────────────────────────────────────────── */
+  .input-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .url-input {
+    flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 18px; color: var(--text); font-family: var(--font-mono);
+    font-size: 13px; outline: none; transition: border-color .2s;
+  }
+  .url-input:focus { border-color: var(--accent); }
+  .url-input::placeholder { color: var(--muted); }
+  .btn {
+    background: var(--accent); color: #0a0c10; font-weight: 700; font-size: 14px;
+    padding: 14px 28px; border: none; border-radius: 8px; cursor: pointer;
+    font-family: var(--font-body); letter-spacing: .5px; transition: opacity .2s, transform .1s;
+    white-space: nowrap;
+  }
+  .btn:hover   { opacity: .88; }
+  .btn:active  { transform: scale(.97); }
+  .btn:disabled{ opacity: .4; cursor: not-allowed; transform: none; }
+
+  /* ── Status / error ─────────────────────────────────────── */
+  .status {
+    display: none; align-items: center; gap: 10px; padding: 14px 18px;
+    border-radius: 8px; font-size: 13px; font-family: var(--font-mono);
+  }
+  .status.loading { display: flex; background: rgba(240,180,41,.1); color: var(--accent); border: 1px solid rgba(240,180,41,.3); }
+  .status.error   { display: flex; background: rgba(224,82,82,.1);  color: var(--accent2); border: 1px solid rgba(224,82,82,.3); }
+  .status.success { display: flex; background: rgba(63,185,80,.1);  color: var(--green);   border: 1px solid rgba(63,185,80,.3); }
+
+  .spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Results leaderboard ────────────────────────────────── */
+  #results-card { display: none; }
+  .leaderboard { display: flex; flex-direction: column; gap: 6px; }
+  .lb-row {
+    display: grid; grid-template-columns: 36px 1fr auto;
+    align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; transition: border-color .15s;
+  }
+  .lb-row:hover { border-color: rgba(240,180,41,.3); }
+  .lb-row.gold   { border-color: rgba(255,215,0,.4);   background: rgba(255,215,0,.05); }
+  .lb-row.silver { border-color: rgba(192,192,192,.3); background: rgba(192,192,192,.04); }
+  .lb-row.bronze { border-color: rgba(205,127,50,.3);  background: rgba(205,127,50,.04); }
+  .lb-rank { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: center; }
+  .lb-name { font-weight: 600; font-size: 14px; }
+  .lb-pts  { font-family: var(--font-mono); font-weight: 500; font-size: 15px; color: var(--accent); }
+
+  /* ── Sheet table ────────────────────────────────────────── */
+  .sheet-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .sheet-label { font-size: 13px; color: var(--muted); font-family: var(--font-mono); }
+  .btn-sm {
+    font-size: 12px; padding: 8px 16px; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    font-family: var(--font-body); font-weight: 600; transition: border-color .2s, color .2s;
+  }
+  .btn-sm:hover  { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.active { border-color: var(--accent); color: var(--accent); background: rgba(240,180,41,.08); }
+
+  .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--surface); }
+  thead th {
+    padding: 10px 14px; text-align: left; font-weight: 600; color: var(--muted);
+    font-size: 11px; letter-spacing: .8px; text-transform: uppercase;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid rgba(33,38,45,.7); transition: background .15s; }
+  tbody tr:hover { background: rgba(255,255,255,.03); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 10px 14px; font-family: var(--font-mono); font-size: 12px; color: var(--text); white-space: nowrap; }
+  .empty-state { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
+
+  /* ── Footer ─────────────────────────────────────────────── */
+  footer { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: auto; }
+
+  @media(max-width:600px) {
+    nav a { padding: 0 10px; font-size: 11px; }
+    .page { padding: 28px 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Nav ─────────────────────────────────────────────── -->
+  <nav>
+    <div class="nav-logo"><span class="dot"></span>Dream<span>11</span> Calc</div>
+    <a onclick="showPage('calc')"   id="nav-calc">Calculator</a>
+    <a onclick="showPage('sheet0')" id="nav-sheet0">Sheet 1</a>
+    <a onclick="showPage('sheet1')" id="nav-sheet1">Sheet 2</a>
+    <a onclick="showPage('sheet2')" id="nav-sheet2">Sheet 3</a>
+  </nav>
+
+  <!-- ══════════════ PAGE: CALCULATOR ════════════════════════ -->
+  <div class="page active" id="page-calc">
+    <div class="page-header">
+      <h1>T20 <em>Points</em> Calculator</h1>
+      <p>Paste an ESPNcricinfo full-scorecard URL and get Dream11 fantasy points instantly.</p>
+    </div>
+
+    <div class="card">
+      <div class="input-row">
+        <input class="url-input" id="url-input" type="url"
+          placeholder="https://www.espncricinfo.com/series/.../full-scorecard"
+          onkeydown="if(event.key==='Enter')calculate()"/>
+        <button class="btn" id="calc-btn" onclick="calculate()">Calculate Points</button>
+      </div>
+      <div style="margin-top:16px">
+        <div class="status" id="calc-status"></div>
+      </div>
+    </div>
+
+    <div class="card" id="results-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:var(--font-head);font-size:28px;letter-spacing:1px;">Match Results</div>
+          <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono)" id="results-meta"></div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--green)" id="push-status"></div>
+      </div>
+      <div class="leaderboard" id="leaderboard"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE: SHEET 0 ════════════════════════════ -->
+  <div class="page" id="page-sheet0">
+    <div class="page-header">
+      <h1>Sheet <em>One</em></h1>
+      <p>Live data from your Google Spreadsheet — first worksheet.</p>
+    </div>
+    <div class="card">
+      <div class="sheet-controls">
+        <button class="btn" onclick="loadSheet(0)" style="font-size:13px;padding:10px 20px;">Refresh</button>
+        <span class="sheet-label" id="sheet0-label">Not loaded yet</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap" id="sheet0-wrap"><div class="empty-state">Click Refresh to load data.</div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE: SHEET 1 ════════════════════════════ -->
+  <div class="page" id="page-sheet1">
+    <div class="page-header">
+      <h1>Sheet <em>Two</em></h1>
+      <p>Live data from your Google Spreadsheet — second worksheet.</p>
+    </div>
+    <div class="card">
+      <div class="sheet-controls">
+        <button class="btn" onclick="loadSheet(1)" style="font-size:13px;padding:10px 20px;">Refresh</button>
+        <span class="sheet-label" id="sheet1-label">Not loaded yet</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap" id="sheet1-wrap"><div class="empty-state">Click Refresh to load data.</div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE: SHEET 2 ════════════════════════════ -->
+  <div class="page" id="page-sheet2">
+    <div class="page-header">
+      <h1>Sheet <em>Three</em></h1>
+      <p>Live data from your Google Spreadsheet — third worksheet (MatchScore).</p>
+    </div>
+    <div class="card">
+      <div class="sheet-controls">
+        <button class="btn" onclick="loadSheet(2)" style="font-size:13px;padding:10px 20px;">Refresh</button>
+        <span class="sheet-label" id="sheet2-label">Not loaded yet</span>
+      </div>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap" id="sheet2-wrap"><div class="empty-state">Click Refresh to load data.</div></div>
+    </div>
+  </div>
+
+  <footer>Dream11 Points Calculator &nbsp;·&nbsp; Built for IPL fantasy leagues</footer>
+</div>
+
+<script>
+  // ── CONFIG — change this to your Render backend URL after deploy ──────────
+  const API_BASE = "https://YOUR-RENDER-APP.onrender.com";
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('nav-'  + name).classList.add('active');
+  }
+  document.getElementById('nav-calc').classList.add('active');
+
+  // ── Calculator ────────────────────────────────────────────────────────────
+  function setStatus(type, msg) {
+    const el = document.getElementById('calc-status');
+    el.className = 'status ' + type;
+    el.innerHTML = type === 'loading'
+      ? `<div class="spinner"></div><span>${msg}</span>`
+      : `<span>${type === 'error' ? '✗' : '✓'}</span><span>${msg}</span>`;
+  }
+
+  async function calculate() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) { setStatus('error', 'Please enter a scorecard URL.'); return; }
+    const btn = document.getElementById('calc-btn');
+    btn.disabled = true;
+    document.getElementById('results-card').style.display = 'none';
+    setStatus('loading', 'Fetching match data from ESPNcricinfo…');
+
+    try {
+      const res  = await fetch(`${API_BASE}/api/calculate`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Server error');
+
+      setStatus('success', `Calculated points for ${data.players.length} players.`);
+      renderLeaderboard(data.players);
+      document.getElementById('results-meta').textContent = `${data.players.length} players · pushed ${data.pushed} rows to Google Sheets`;
+      document.getElementById('push-status').textContent  = `✓ Saved to Google Sheets`;
+    } catch (e) {
+      setStatus('error', e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderLeaderboard(players) {
+    const card = document.getElementById('results-card');
+    const lb   = document.getElementById('leaderboard');
+    card.style.display = 'block';
+    const medals = ['gold','silver','bronze'];
+    lb.innerHTML = players.map((p,i) => `
+      <div class="lb-row ${medals[i]||''}">
+        <div class="lb-rank">${i+1}</div>
+        <div class="lb-name">${p.player}</div>
+        <div class="lb-pts">${p.points} pts</div>
+      </div>`).join('');
+  }
+
+  // ── Sheet loader ──────────────────────────────────────────────────────────
+  async function loadSheet(idx) {
+    const wrap  = document.getElementById(`sheet${idx}-wrap`);
+    const label = document.getElementById(`sheet${idx}-label`);
+    wrap.innerHTML  = '<div class="empty-state"><div class="spinner" style="margin:0 auto;width:24px;height:24px;border-width:3px"></div></div>';
+    label.textContent = 'Loading…';
+    try {
+      const res  = await fetch(`${API_BASE}/api/sheet/${idx}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      label.textContent = `"${data.title}" · ${data.data.length} rows`;
+      renderTable(wrap, data.data);
+    } catch (e) {
+      wrap.innerHTML = `<div class="empty-state" style="color:var(--accent2)">Error: ${e.message}</div>`;
+      label.textContent = 'Failed to load';
+    }
+  }
+
+  function renderTable(wrap, rows) {
+    if (!rows || rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Sheet is empty.</div>';
+      return;
+    }
+    // First non-empty row as header
+    const header = rows[0];
+    const body   = rows.slice(1);
+    const ths    = header.map(h => `<th>${h}</th>`).join('');
+    const trs    = body.map(r => {
+      const tds = header.map((_,i) => `<td>${r[i] ?? ''}</td>`).join('');
+      return `<tr>${tds}</tr>`;
+    }).join('');
+    wrap.innerHTML = `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+  }
+
+  // Auto-load sheets when you visit them
+  const visited = {};
+  document.querySelectorAll('nav a').forEach(a => {
+    a.addEventListener('click', () => {
+      const pg = a.id.replace('nav-','');
+      if (pg.startsWith('sheet') && !visited[pg]) {
+        visited[pg] = true;
+        loadSheet(parseInt(pg.replace('sheet','')));
+      }
+    });
+  });
+</script>
+</body>
+</html>
